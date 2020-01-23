@@ -1,4 +1,5 @@
 const HttpError = require("../models/http-error");
+const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const uuid = require("uuid/v4");
 
@@ -20,30 +21,50 @@ exports.login = (req, res, next) => {
 
   const identifiedUser = DUMMY_USERS.find(u => u.email === email);
   if (!identifiedUser || identifiedUser.password != password) {
-    throw new HttpError("Login credentials are incorrect", 401);
+    return next(new HttpError("Login credentials are incorrect", 401));
   }
   res.json({ message: "Logged in" });
 };
 
-exports.signUp = (req, res, next) => {
+exports.signUp = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log(errors);
-    throw new HttpError("Invalid inputs passed, please check your data", 422);
+    return next(
+      new HttpError("Invalid inputs passed, please check your data", 422)
+    );
   }
-  const { name, email, password } = req.body;
+  const { name, email, password, places } = req.body;
 
-  const hasUser = DUMMY_USERS.find(u => u.email === email);
-  if (hasUser) {
-    throw new HttpError("User already exists", 422);
+  let existingUser;
+  try {
+    existingUser = await User.findOne({ email: email });
+  } catch (err) {
+    const error = new HttpError("Signing up failed", 500);
+    return next(error);
   }
-  const createdUser = {
-    id: uuid(),
+  if (existingUser) {
+    const error = new HttpError(
+      "User exists already, please login instead",
+      422
+    );
+    return next(error);
+  }
+  const createdUser = new User({
     name,
     email,
-    password
-  };
+    image:
+      "https://images.unsplash.com/photo-1502104034360-73176bb1e92e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80",
+    password, //todo encrypt password
+    places
+  });
 
-  DUMMY_USERS.push(createdUser);
-  res.status(201).json({ user: createdUser });
+  try {
+    await createdUser.save();
+  } catch (err) {
+    const error = new HttpError("Signing Up failed, please try again.", 500);
+    return next(error);
+  }
+
+  res.status(201).json({ user: createdUser.toObject({ getters: true }) });
 };
