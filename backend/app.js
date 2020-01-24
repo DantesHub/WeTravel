@@ -32,7 +32,7 @@ const connectConfig = {
   useCreateIndex: true
 };
 const connectUrl =
-  "mongodb+srv://tfkim67:kevin0105@cluster0-prukk.mongodb.net/test?retryWrites=true&w=majority ";
+  "mongodb+srv://tfkim67:kevin0105@cluster0-prukk.mongodb.net/places?retryWrites=true&w=majority ";
 mongoose
   .connect(connectUrl, connectConfig)
   .then(() => {
